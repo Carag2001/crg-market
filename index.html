@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRG IA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;background:#08080f;color:#e0e0e0;height:100vh;display:flex;overflow:hidden;}
+
+/* AUTH */
+#auth{position:fixed;inset:0;z-index:100;background:#08080f;display:flex;align-items:center;justify-content:center;}
+#auth.hide{display:none;}
+.acard{background:#0f0f1a;border:1px solid #1c1c2e;border-radius:14px;padding:50px 42px;width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.6);}
+.abrand{text-align:center;margin-bottom:38px;}
+.alogo{width:68px;height:68px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;margin-bottom:16px;box-shadow:0 0 30px rgba(30,80,200,0.3);}
+.abrand h1{font-size:24px;font-weight:700;color:#fff;letter-spacing:1px;}
+.abrand p{font-size:13px;color:#444;margin-top:5px;}
+.tabs{display:flex;background:#0a0a14;border-radius:9px;padding:4px;margin-bottom:30px;}
+.tab{flex:1;text-align:center;padding:10px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:#444;transition:all .2s;letter-spacing:.5px;}
+.tab.on{background:#1a3a8f;color:#fff;}
+.fld{margin-bottom:18px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:#444;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+.fld input{width:100%;padding:12px 15px;background:#0a0a14;border:1px solid #1c1c2e;border-radius:8px;color:#e0e0e0;font-family:Arial,sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.fld input:focus{border-color:#2a5abf;}
+.fld input::placeholder{color:#2a2a3a;}
+.abtn{width:100%;padding:13px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border:none;border-radius:8px;color:#fff;font-family:Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;margin-top:6px;}
+.abtn:hover{background:linear-gradient(135deg,#2a4aaf,#1a3080);box-shadow:0 0 20px rgba(30,80,200,0.3);}
+.amsg{font-size:12px;text-align:center;margin-top:14px;display:none;}
+.amsg.err{color:#e05555;display:block;}
+.amsg.ok{color:#55b870;display:block;}
+
+/* APP */
+#app{display:none;width:100vw;height:100vh;}
+#app.show{display:flex;}
+
+/* SIDEBAR */
+.sb{width:258px;background:#0a0a14;border-right:1px solid #141424;display:flex;flex-direction:column;flex-shrink:0;}
+.sb-top{padding:18px 16px;border-bottom:1px solid #141424;display:flex;align-items:center;gap:12px;}
+.sb-logo{width:36px;height:36px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-ttl{font-size:15px;font-weight:700;color:#fff;}
+.sb-sub{font-size:10px;color:#333;margin-top:1px;letter-spacing:.5px;}
+.nb{margin:12px;padding:10px 14px;background:transparent;border:1px solid #1c1c2e;border-radius:8px;color:#888;font-family:Arial,sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:8px;}
+.nb:hover{border-color:#2a5abf;color:#fff;background:#10101e;}
+.hl{padding:5px 16px;font-size:10px;font-weight:700;color:#282838;letter-spacing:1.5px;text-transform:uppercase;}
+.hlist{flex:1;overflow-y:auto;padding:4px 8px;scrollbar-width:thin;scrollbar-color:#1c1c2e transparent;}
+.hi{display:flex;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;gap:8px;border:1px solid transparent;}
+.hi:hover{background:#10101e;border-color:#1c1c2e;}
+.hi.on{background:#0f1828;border-color:#1a3a8f;}
+.hi-txt{flex:1;font-size:13px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hi.on .hi-txt{color:#ddd;}
+.hd{background:none;border:none;color:#222;cursor:pointer;font-size:13px;padding:2px 5px;opacity:0;transition:opacity .15s;}
+.hi:hover .hd{opacity:1;}
+.hd:hover{color:#e05555;}
+.sb-foot{border-top:1px solid #141424;padding:12px;}
+.urow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:default;}
+.uav{width:32px;height:32px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.uname{font-size:13px;font-weight:700;color:#ccc;}
+.uemail{font-size:11px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}
+.logoutbtn{margin-left:auto;background:none;border:none;color:#282838;cursor:pointer;font-size:15px;padding:4px;transition:color .2s;}
+.logoutbtn:hover{color:#e05555;}
+
+/* MAIN */
+.mn{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.tbar{height:54px;border-bottom:1px solid #141424;display:flex;align-items:center;padding:0 24px;background:#0a0a14;flex-shrink:0;gap:12px;}
+.tbar-ttl{font-size:15px;font-weight:700;color:#fff;}
+.tbar-badge{font-size:11px;color:#2a5abf;background:#0d1830;border:1px solid #1a3a8f;padding:3px 10px;border-radius:20px;}
+.tbar-sp{flex:1;}
+
+/* MESSAGES */
+.msgs{flex:1;overflow-y:auto;padding:28px 0;scrollbar-width:thin;scrollbar-color:#1c1c2e transparent;}
+.welcome{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;}
+.wlogo{width:76px;height:76px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;margin-bottom:22px;box-shadow:0 0 40px rgba(20,60,180,0.25);}
+.welcome h2{font-size:26px;font-weight:700;color:#fff;margin-bottom:8px;}
+.welcome p{font-size:14px;color:#444;}
+
+.msg{max-width:800px;margin:0 auto 22px;padding:0 28px;animation:fi .25s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.mh{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.mav{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.mav.u{background:linear-gradient(135deg,#1a3a8f,#0d2060);}
+.mav.a{background:#090e1f;border:1px solid #1a3a8f;}
+.mwho{font-size:13px;font-weight:700;color:#ccc;}
+.mwhen{font-size:11px;color:#252535;margin-left:4px;}
+.mb{padding-left:38px;font-size:14px;line-height:1.8;color:#bbb;}
+.msg.u .mb{background:#0b1220;border:1px solid #141f38;border-radius:0 10px 10px 10px;padding:14px 16px;color:#ccc;}
+.mb p{margin-bottom:9px;}.mb p:last-child{margin-bottom:0;}
+.mb strong{color:#fff;}
+.mb ul,.mb ol{padding-left:20px;margin:7px 0;}
+.mb li{margin:4px 0;}
+.mb h1,.mb h2,.mb h3{color:#fff;margin:14px 0 7px;font-size:15px;}
+.mb pre{background:#050508;border:1px solid #1c1c2e;border-radius:8px;padding:16px 16px 16px 16px;margin:10px 0;overflow-x:auto;position:relative;}
+.mb code{font-family:'Courier New',monospace;font-size:13px;color:#7ab8f5;}
+.mb pre code{display:block;}
+.cpbtn{position:absolute;top:8px;right:10px;background:#111128;border:1px solid #1c1c2e;border-radius:5px;color:#555;font-size:11px;padding:3px 9px;cursor:pointer;font-family:Arial,sans-serif;font-weight:700;transition:all .2s;}
+.cpbtn:hover{color:#7ab8f5;border-color:#2a5abf;}
+.imgprev{padding-left:38px;margin-bottom:8px;}
+.imgprev img{max-width:280px;max-height:280px;border-radius:8px;border:1px solid #1c1c2e;}
+.typing{display:flex;align-items:center;gap:5px;padding-left:38px;}
+.td{width:7px;height:7px;border-radius:50%;background:#1a3a8f;animation:tda 1.2s ease infinite;}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes tda{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* INPUT */
+.iz{border-top:1px solid #141424;padding:16px 28px 20px;background:#0a0a14;flex-shrink:0;}
+.ibox{max-width:800px;margin:0 auto;background:#0f0f1a;border:1px solid #1c1c2e;border-radius:13px;transition:border-color .2s;}
+.ibox:focus-within{border-color:#2a5abf;}
+.uprev{display:none;padding:10px 16px 0;gap:8px;flex-wrap:wrap;}
+.uprev.has{display:flex;}
+.uth{position:relative;display:inline-block;}
+.uth img{width:58px;height:58px;object-fit:cover;border-radius:6px;border:1px solid #1c1c2e;}
+.uth .rm{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#e05555;border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.irow{display:flex;align-items:flex-end;padding:8px 8px 8px 16px;gap:6px;}
+.ta{flex:1;background:none;border:none;outline:none;color:#e0e0e0;font-family:Arial,sans-serif;font-size:14px;resize:none;min-height:40px;max-height:160px;line-height:1.6;padding:8px 0;scrollbar-width:thin;}
+.ta::placeholder{color:#252535;}
+.icobtn{width:36px;height:36px;border-radius:8px;background:transparent;border:1px solid transparent;color:#333;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.icobtn:hover{background:#141424;color:#888;border-color:#1c1c2e;}
+.sendbtn{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#1a3a8f,#0d2060);border:none;color:#fff;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sendbtn:hover{box-shadow:0 0 16px rgba(20,60,200,0.4);}
+.sendbtn:disabled{opacity:.3;cursor:not-allowed;}
+.ihint{max-width:800px;margin:8px auto 0;font-size:11px;color:#1a1a28;text-align:center;}
+#fi{display:none;}
+@media(max-width:640px){.sb{display:none;}.msg,.iz{padding-left:14px;padding-right:14px;}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="acard">
+    <div class="abrand">
+      <div class="alogo">CRG</div>
+      <h1>CRG IA</h1>
+      <p>Intelligence Artificielle</p>
+    </div>
+    <div class="tabs">
+      <div class="tab on" id="tl" onclick="stab('l')">CONNEXION</div>
+      <div class="tab" id="tr" onclick="stab('r')">INSCRIPTION</div>
+    </div>
+    <div id="fl">
+      <div class="fld"><label>Adresse email</label><input type="email" id="le" placeholder="votre@email.com"/></div>
+      <div class="fld"><label>Mot de passe</label><input type="password" id="lp" placeholder="Votre mot de passe" onkeydown="if(event.key==='Enter')login()"/></div>
+      <button class="abtn" onclick="login()">SE CONNECTER</button>
+    </div>
+    <div id="fr" style="display:none">
+      <div class="fld"><label>Nom d'utilisateur</label><input type="text" id="ru" placeholder="Choisissez un nom"/></div>
+      <div class="fld"><label>Adresse email</label><input type="email" id="re" placeholder="votre@email.com"/></div>
+      <div class="fld"><label>Mot de passe</label><input type="password" id="rp" placeholder="Minimum 6 caractères" onkeydown="if(event.key==='Enter')reg()"/></div>
+      <button class="abtn" onclick="reg()">CRÉER MON COMPTE</button>
+    </div>
+    <div class="amsg" id="amsg"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sb">
+    <div class="sb-top">
+      <div class="sb-logo">CRG</div>
+      <div><div class="sb-ttl">CRG IA</div><div class="sb-sub">INTELLIGENCE ARTIFICIELLE</div></div>
+    </div>
+    <button class="nb" onclick="newChat()"><span style="font-size:17px">+</span> Nouvelle conversation</button>
+    <div class="hl">Historique</div>
+    <div class="hlist" id="hlist"></div>
+    <div class="sb-foot">
+      <div class="urow">
+        <div class="uav" id="uav">U</div>
+        <div style="min-width:0">
+          <div class="uname" id="uname">Utilisateur</div>
+          <div class="uemail" id="uemail"></div>
+        </div>
+        <button class="logoutbtn" onclick="logout()" title="Déconnexion">⎋</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="mn">
+    <div class="tbar">
+      <div class="tbar-ttl">CRG IA</div>
+      <div class="tbar-badge">● En ligne</div>
+      <div class="tbar-sp"></div>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <div class="iz">
+      <div class="ibox">
+        <div class="uprev" id="uprev"></div>
+        <div class="irow">
+          <textarea class="ta" id="ta" placeholder="Posez votre question à CRG IA..." rows="1" onkeydown="hkey(event)" oninput="aH(this)"></textarea>
+          <button class="icobtn" onclick="document.getElementById('fi').click()" title="Joindre une image">🖼</button>
+          <button class="sendbtn" id="sb2" onclick="doSend()">➤</button>
+        </div>
+      </div>
+      <div class="ihint">CRG IA peut faire des erreurs — vérifiez les informations importantes.</div>
+      <input type="file" id="fi" accept="image/*" onchange="hImg(event)"/>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── AUTH ──────────────────────────────────────────────
+function stab(t){
+  document.getElementById('tl').classList.toggle('on',t==='l');
+  document.getElementById('tr').classList.toggle('on',t==='r');
+  document.getElementById('fl').style.display=t==='l'?'block':'none';
+  document.getElementById('fr').style.display=t==='r'?'block':'none';
+  document.getElementById('amsg').className='amsg';
+}
+function smsg(txt,type){const e=document.getElementById('amsg');e.textContent=txt;e.className='amsg '+type;}
+const gU=()=>{try{return JSON.parse(localStorage.getItem('_u')||'{}')}catch{return{}}};
+const sU=v=>localStorage.setItem('_u',JSON.stringify(v));
+function login(){
+  const e=document.getElementById('le').value.trim().toLowerCase();
+  const p=document.getElementById('lp').value;
+  if(!e||!p)return smsg('Remplissez tous les champs.','err');
+  const U=gU();
+  if(!U[e])return smsg('Aucun compte trouvé pour cet email.','err');
+  if(U[e].p!==btoa(p))return smsg('Mot de passe incorrect.','err');
+  go(U[e].n,e);
+}
+function reg(){
+  const n=document.getElementById('ru').value.trim();
+  const e=document.getElementById('re').value.trim().toLowerCase();
+  const p=document.getElementById('rp').value;
+  if(!n||!e||!p)return smsg('Remplissez tous les champs.','err');
+  if(n.length<3)return smsg('Nom trop court (min. 3 caractères).','err');
+  if(!e.includes('@'))return smsg('Email invalide.','err');
+  if(p.length<6)return smsg('Mot de passe trop court (min. 6 caractères).','err');
+  const U=gU();
+  if(U[e])return smsg('Un compte existe déjà avec cet email.','err');
+  U[e]={p:btoa(p),n,d:Date.now()};sU(U);
+  smsg('Compte créé avec succès !','ok');
+  setTimeout(()=>go(n,e),700);
+}
+function go(name,email){
+  _user={name,email};
+  localStorage.setItem('_s',JSON.stringify(_user));
+  _convs=JSON.parse(localStorage.getItem('_cv_'+email)||'{}');
+  document.getElementById('auth').classList.add('hide');
+  document.getElementById('app').classList.add('show');
+  document.getElementById('uname').textContent=name;
+  document.getElementById('uemail').textContent=email;
+  document.getElementById('uav').textContent=name[0].toUpperCase();
+  rHist();newChat();
+}
+function logout(){
+  localStorage.removeItem('_s');_user=null;_convs={};_cid=null;
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('auth').classList.remove('hide');
+  document.getElementById('le').value='';document.getElementById('lp').value='';
+  document.getElementById('amsg').className='amsg';
+}
+// auto-login
+let _user=null,_convs={},_cid=null,_busy=false,_pimg=null;
+(()=>{try{const s=JSON.parse(localStorage.getItem('_s'));if(s?.email){const U=gU();if(U[s.email])go(s.name,s.email);}}catch{}})();
+
+// ── CONVERSATIONS ─────────────────────────────────────
+const gid=()=>'c'+Date.now()+Math.random().toString(36).slice(2,6);
+function newChat(){
+  const id=gid();
+  _convs[id]={id,title:'Nouvelle conversation',msgs:[],ts:Date.now()};
+  _cid=id;save();rHist();clrMsgs();
+}
+function loadConv(id){
+  _cid=id;clrMsgs();
+  const c=_convs[id];
+  if(!c?.msgs.length){wlc();rHist();return;}
+  document.getElementById('msgs').innerHTML='';
+  c.msgs.forEach(m=>{if(m.img)apImg(m.img);apMsg(m.role,m.content,false);});
+  rHist();
+}
+function delConv(id,e){
+  e.stopPropagation();delete _convs[id];save();
+  if(id===_cid)newChat();else rHist();
+}
+function save(){localStorage.setItem('_cv_'+_user.email,JSON.stringify(_convs));}
+function rHist(){
+  const l=document.getElementById('hlist');l.innerHTML='';
+  Object.values(_convs).sort((a,b)=>b.ts-a.ts).forEach(c=>{
+    const d=document.createElement('div');
+    d.className='hi'+(c.id===_cid?' on':'');
+    d.innerHTML=`<div class="hi-txt" onclick="loadConv('${c.id}')">💬 ${esc(c.title)}</div><button class="hd" onclick="delConv('${c.id}',event)">✕</button>`;
+    l.appendChild(d);
+  });
+}
+function clrMsgs(){document.getElementById('msgs').innerHTML='';wlc();}
+function wlc(){
+  document.getElementById('msgs').innerHTML=`<div class="welcome"><div class="wlogo">CRG</div><h2>Bonjour, comment puis-je vous aider ?</h2><p>Posez n'importe quelle question — code, images, analyses, rédaction...</p></div>`;
+}
+
+// ── IMAGE ─────────────────────────────────────────────
+function hImg(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    _pimg={b64:ev.target.result.split(',')[1],mime:f.type,url:ev.target.result};
+    const p=document.getElementById('uprev');
+    p.innerHTML=`<div class="uth"><img src="${ev.target.result}"/><button class="rm" onclick="clrImg()">✕</button></div>`;
+    p.classList.add('has');
+  };
+  r.readAsDataURL(f);e.target.value='';
+}
+function clrImg(){_pimg=null;const p=document.getElementById('uprev');p.innerHTML='';p.classList.remove('has');}
+function apImg(url){
+  const d=document.createElement('div');d.className='msg';
+  d.innerHTML=`<div class="imgprev"><img src="${url}"/></div>`;
+  document.getElementById('msgs').appendChild(d);
+}
+
+// ── SEND ──────────────────────────────────────────────
+function hkey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}}
+function aH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';}
+
+async function doSend(){
+  if(_busy)return;
+  const ta=document.getElementById('ta');
+  const txt=ta.value.trim();
+  if(!txt&&!_pimg)return;
+  document.getElementById('msgs').querySelector('.welcome')?.remove();
+  const conv=_convs[_cid];
+  const entry={role:'user',content:txt||'[Image envoyée]'};
+  if(_pimg)entry.img=_pimg.url;
+  conv.msgs.push(entry);
+  if(conv.title==='Nouvelle conversation'&&txt)conv.title=txt.slice(0,44)+(txt.length>44?'…':'');
+  save();
+  if(_pimg)apImg(_pimg.url);
+  if(txt)apMsg('user',txt,true);
+  ta.value='';ta.style.height='auto';
+  const img=_pimg;clrImg();rHist();
+  const tid='t'+Date.now();showTyp(tid);
+  _busy=true;document.getElementById('sb2').disabled=true;
+  try{
+    const reply=await callAI(conv.msgs,img);
+    remTyp(tid);
+    conv.msgs.push({role:'assistant',content:reply});
+    save();apMsg('assistant',reply,true);
+  }catch(err){
+    remTyp(tid);
+    apMsg('assistant','❌ **Erreur :** '+err.message,true);
+  }
+  _busy=false;document.getElementById('sb2').disabled=false;
+}
+
+// ── API CALL ──────────────────────────────────────────
+async function callAI(msgs,img){
+  // Build messages
+  const built=[];
+  for(let i=0;i<msgs.length;i++){
+    const m=msgs[i],isLast=i===msgs.length-1;
+    if(isLast&&img&&m.role==='user'){
+      built.push({role:'user',content:[
+        {type:'image_url',image_url:{url:`data:${img.mime};base64,${img.b64}`}},
+        {type:'text',text:m.content||'Analyse cette image.'}
+      ]});
+    } else {
+      built.push({role:m.role==='assistant'?'assistant':'user',content:m.content});
+    }
+  }
+
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer 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'
+    },
+    body:JSON.stringify({
+      model:'mistralai/mistral-7b-instruct:free',
+      messages:[
+        {role:'system',content:'Tu es CRG IA, une intelligence artificielle avancée et professionnelle. Tu réponds en français. Tu peux répondre à toutes les questions, créer du code, des sites web, des scripts, analyser des images, rédiger des textes. Tu es précis, complet et utile.'},
+        ...built
+      ],
+      max_tokens:4096
+    })
+  });
+  const data=await res.json();
+  if(!res.ok)throw new Error(data.error?.message||'Erreur API ('+res.status+')');
+  if(!data.choices?.[0])throw new Error('Réponse vide');
+  return data.choices[0].message.content;
+}
+
+// ── RENDER ────────────────────────────────────────────
+function apMsg(role,content,anim){
+  const msgs=document.getElementById('msgs');
+  const d=document.createElement('div');
+  d.className='msg '+(role==='user'?'u':'a');
+  if(!anim)d.style.animation='none';
+  const now=new Date();
+  const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const isU=role==='user';
+  d.innerHTML=`<div class="mh"><div class="mav ${isU?'u':'a'}">${isU?(_user?.name[0].toUpperCase()||'U'):'IA'}</div><span class="mwho">${isU?(_user?.name||'Vous'):'CRG IA'}</span><span class="mwhen">${t}</span></div><div class="mb">${fmt(content)}</div>`;
+  d.querySelectorAll('pre').forEach(p=>{
+    const b=document.createElement('button');b.className='cpbtn';b.textContent='Copier';
+    b.onclick=()=>{navigator.clipboard.writeText(p.querySelector('code')?.textContent||p.textContent);b.textContent='✓';setTimeout(()=>b.textContent='Copier',1800);};
+    p.appendChild(b);
+  });
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+function fmt(t){
+  let h=t;
+  h=h.replace(/```(\w+)?\n?([\s\S]*?)```/g,(_,l,c)=>`<pre><code>${esc(c.trim())}</code></pre>`);
+  h=h.replace(/`([^`]+)`/g,'<code>$1</code>');
+  h=h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  h=h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  h=h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  h=h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  h=h.replace(/^[-*] (.+)$/gm,'<li>$1</li>');
+  h=h.replace(/(<li>[\s\S]+?<\/li>)/g,'<ul>$1</ul>');
+  h=h.split(/\n\n+/).map(p=>{if(/^<(pre|h[1-3]|ul)/.test(p.trim()))return p;return `<p>${p.replace(/\n/g,'<br>')}</p>`;}).join('');
+  return h;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showTyp(id){
+  const d=document.createElement('div');d.id=id;d.className='msg a';
+  d.innerHTML=`<div class="mh"><div class="mav a">IA</div><span class="mwho">CRG IA</span></div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  const m=document.getElementById('msgs');m.appendChild(d);m.scrollTop=m.scrollHeight;
+}
+function remTyp(id){document.getElementById(id)?.remove();}
+</script>
+</body>
+</html>
