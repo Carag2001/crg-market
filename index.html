@@ -1,449 +1,2553 @@
-import { useState, useEffect, useRef } from "react";
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Roulotte – Marketplace des Gens du Voyage</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --accent: #ff3c00;
+    --accent2: #ffd700;
+    --green: #00c853;
+    --text: #f0f0f0;
+    --muted: #888;
+    --border: rgba(255,255,255,0.08);
+    --card: #13131c;
+  }
 
-const SYSTEM = `Tu es CRG IA, une intelligence artificielle avancée et professionnelle. Tu réponds en français par défaut. Tu peux répondre à toutes les questions possibles, créer du code complet, des sites web, des scripts, analyser des images, rédiger des textes professionnels. Tu es précis, complet et très utile.`;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
 
-// ── tiny storage helpers ──
-const gU = () => { try { return JSON.parse(localStorage.getItem("_crg_u") || "{}"); } catch { return {}; } };
-const sU = v => localStorage.setItem("_crg_u", JSON.stringify(v));
-const gC = e => { try { return JSON.parse(localStorage.getItem("_crg_c_" + e) || "{}"); } catch { return {}; } };
-const sC = (e, v) => localStorage.setItem("_crg_c_" + e, JSON.stringify(v));
-const gid = () => "c" + Date.now() + Math.random().toString(36).slice(2, 6);
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.3;
+  }
 
-function fmt(text) {
-  let h = text;
-  h = h.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, l, c) => `<pre data-lang="${l||''}"><code>${esc(c.trim())}</code></pre>`);
-  h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
-  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  h = h.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  h = h.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-  h = h.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  h = h.replace(/^[-*] (.+)$/gm, "<li>$1</li>");
-  h = h.replace(/(<li>[\s\S]+?<\/li>)/g, "<ul>$1</ul>");
-  h = h.split(/\n\n+/).map(p => /^<(pre|h[1-3]|ul)/.test(p.trim()) ? p : `<p>${p.replace(/\n/g, "<br/>")}</p>`).join("");
-  return h;
-}
+  /* ─── HEADER ─── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
 
-function CopyBtn({ text }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
-      style={{ position:"absolute", top:8, right:10, background:"#111128", border:"1px solid #1c1c2e", borderRadius:5, color: copied?"#55b870":"#555", fontSize:11, padding:"3px 9px", cursor:"pointer", fontFamily:"Arial", fontWeight:700 }}>
-      {copied ? "✓" : "Copier"}
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.9rem;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .logo-icon { font-size: 1.6rem; }
+  .logo span { color: var(--accent); }
+
+  .logo-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.45rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: block;
+    margin-top: -4px;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  nav a:hover { color: var(--text); }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* Bouton Devenir Vendeur */
+  .btn-seller {
+    background: linear-gradient(135deg, var(--accent2), #ffb300);
+    color: #000;
+    border: none;
+    padding: 9px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-seller:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,215,0,0.35); }
+
+  .btn-login {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .btn-login:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Bouton compte connecté */
+  .btn-account {
+    background: rgba(255,215,0,0.1);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 9px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-account.visible { display: flex; }
+
+  .btn-add-article {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-add-article.visible { display: flex; }
+  .btn-add-article:hover { background: #e03400; transform: translateY(-1px); }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 4rem 2rem;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 60% at 70% 50%, rgba(255,60,0,0.1) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 15% 80%, rgba(255,215,0,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 30% at 85% 10%, rgba(255,60,0,0.05) 0%, transparent 60%);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 750px;
+  }
+
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent2);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 30px;
+    height: 1px;
+    background: var(--accent2);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 9vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: 2px;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 .line2 { color: var(--accent); display: block; }
+
+  .hero-desc {
+    color: var(--muted);
+    font-size: 1.05rem;
+    max-width: 520px;
+    line-height: 1.75;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary:hover { background: #e03400; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,60,0,0.3); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .hero-stats {
+    position: absolute;
+    bottom: 3rem;
+    right: 3rem;
+    display: flex;
+    gap: 3rem;
+    z-index: 2;
+  }
+
+  .stat { text-align: right; }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ─── TICKER ─── */
+  .ticker-wrap {
+    background: var(--accent);
+    overflow: hidden;
+    padding: 11px 0;
+    border-top: 2px solid rgba(255,255,255,0.2);
+    border-bottom: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .ticker {
+    display: flex;
+    animation: ticker 35s linear infinite;
+    white-space: nowrap;
+  }
+
+  .ticker-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: white;
+    padding: 0 3rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .ticker-dot { width: 5px; height: 5px; background: rgba(255,255,255,0.5); border-radius: 50%; }
+
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ─── MAIN SECTION ─── */
+  #annonces {
+    padding: 5rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 2px;
+  }
+
+  .section-title span { color: var(--accent); }
+
+  /* ─── SEARCH ─── */
+  .search-wrap {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .search-input-wrap {
+    flex: 1;
+    min-width: 280px;
+    position: relative;
+  }
+
+  .search-input-wrap svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 14px 14px 46px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--accent); }
+
+  .search-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .search-btn:hover { background: #e03400; }
+
+  /* ─── CATEGORIES ─── */
+  .categories-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.6rem;
+    margin-bottom: 3rem;
+  }
+
+  .cat-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 12px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cat-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 0; height: 2px;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+
+  .cat-btn:hover::after, .cat-btn.active::after { width: 100%; }
+
+  .cat-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: translateY(-2px);
+  }
+
+  .cat-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255,60,0,0.08);
+  }
+
+  .cat-icon { font-size: 1.5rem; }
+  .cat-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ─── FILTER BAR ─── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .results-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .results-count span { color: var(--accent); }
+
+  .sort-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .sort-label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+  .sort-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .sort-select:focus { border-color: var(--accent); }
+
+  /* ─── PRODUCT CARD ─── */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .product-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .product-card:hover {
+    border-color: rgba(255,60,0,0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  }
+
+  .product-badge {
+    position: absolute;
+    top: 12px; left: 12px;
+    z-index: 2;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    text-transform: uppercase;
+  }
+
+  .badge-new { background: var(--accent); color: white; }
+  .badge-urgent { background: #ff006e; color: white; }
+  .badge-nego { background: var(--accent2); color: #000; }
+
+  .product-img {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Si l'article a une vraie image */
+  .product-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+  }
+
+  .product-img-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .product-card:hover .product-img-overlay { opacity: 1; }
+
+  .quick-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-size: 0.72rem;
+    font-family: 'Space Mono', monospace;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transform: translateY(10px);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+
+  .product-card:hover .quick-btn {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .product-info { padding: 1.2rem; }
+
+  .product-cat {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .product-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .product-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  /* Info vendeur sur la carte */
+  .product-seller {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+
+  .seller-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .seller-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .seller-region {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .product-price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.7rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .price-nego {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--accent2);
+    letter-spacing: 1px;
+    margin-left: 4px;
+  }
+
+  .contact-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 8px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .contact-btn:hover { background: #e03400; transform: scale(1.05); }
+
+  /* Owner actions (visible seulement pour le vendeur de l'article) */
+  .owner-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .edit-btn {
+    flex: 1;
+    background: rgba(255,215,0,0.1);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .edit-btn:hover { background: rgba(255,215,0,0.2); }
+
+  .delete-btn {
+    flex: 1;
+    background: rgba(255,60,0,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .delete-btn:hover { background: rgba(255,60,0,0.25); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    grid-column: 1 / -1;
+    display: none;
+  }
+
+  .empty-state.visible { display: block; }
+  .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+
+  .empty-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-desc { color: var(--muted); font-size: 0.9rem; }
+
+  /* ─── FEATURES ─── */
+  .features {
+    padding: 4rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .feature {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 2rem;
+    display: flex;
+    gap: 1.2rem;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+
+  .feature:hover { border-color: var(--accent); }
+  .feature-icon { font-size: 2rem; flex-shrink: 0; }
+  .feature-title { font-weight: 700; margin-bottom: 4px; font-size: 0.95rem; }
+  .feature-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem 2rem;
+    margin-top: 4rem;
+  }
+
+  .footer-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .footer-brand .logo { margin-bottom: 1rem; font-size: 1.5rem; }
+
+  .footer-tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    max-width: 280px;
+    margin-bottom: 1.5rem;
+  }
+
+  .footer-socials { display: flex; gap: 10px; }
+
+  .social-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .social-btn:hover { border-color: var(--accent); background: rgba(255,60,0,0.1); }
+
+  .footer-col h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+
+  .footer-col ul { list-style: none; }
+  .footer-col ul li { margin-bottom: 0.7rem; }
+  .footer-col ul li a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+    opacity: 0.8;
+  }
+  .footer-col ul li a:hover { color: var(--accent); opacity: 1; }
+
+  .footer-bottom {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .footer-copy {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .footer-copy span { color: var(--accent); }
+
+  /* ─── MODALS ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(30px) scale(0.97);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .modal-title span { color: var(--accent); }
+
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal-body { padding: 1.5rem; }
+
+  .modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-tab {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Forms */
+  .form-group { margin-bottom: 1.2rem; }
+
+  .form-label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-select { cursor: pointer; }
+  .form-textarea { resize: vertical; min-height: 100px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .form-check input { width: 16px; height: 16px; accent-color: var(--accent2); cursor: pointer; }
+
+  .form-btn {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  .form-btn:hover { background: #e03400; }
+  .form-btn.gold { background: linear-gradient(135deg, var(--accent2), #ffb300); color: #000; }
+  .form-btn.gold:hover { opacity: 0.9; }
+
+  .form-divider {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 1rem 0;
+    position: relative;
+  }
+
+  .form-divider::before, .form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .form-divider::before { left: 0; }
+  .form-divider::after { right: 0; }
+
+  .form-link {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.82rem;
+  }
+
+  .modal-info {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Image upload zone */
+  .img-upload-zone {
+    border: 2px dashed var(--border);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+  }
+
+  .img-upload-zone:hover { border-color: var(--accent); }
+  .img-upload-zone .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .img-upload-zone p { font-size: 0.82rem; color: var(--muted); }
+  .img-upload-zone input { display: none; }
+
+  /* ─── CONTACT MODAL ─── */
+  .contact-modal-phone {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .contact-seller-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .contact-seller-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--bg3);
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 2000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    max-width: 320px;
+  }
+
+  .toast.success { border-color: var(--green); border-left-color: var(--green); }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 1.5rem; }
+  .toast-msg { font-size: 0.85rem; font-weight: 500; }
+
+  /* ─── UPLOAD PHOTOS ─── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg3);
+    position: relative;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(255,60,0,0.04); }
+  .upload-zone input[type=file] { display: none; }
+  .upload-zone-icon { font-size: 2rem; margin-bottom: 6px; }
+  .upload-zone p { font-size: 0.8rem; color: var(--muted); }
+  .upload-zone span { font-size: 0.7rem; color: var(--muted); font-family: 'Space Mono', monospace; letter-spacing: 1px; }
+
+  .photos-preview {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .photo-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .photo-thumb-remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    color: white;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background 0.2s;
+  }
+
+  .photo-thumb-remove:hover { background: var(--accent); }
+
+  .photo-main-badge {
+    position: absolute;
+    bottom: 4px; left: 4px;
+    background: var(--accent2);
+    color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    padding: 2px 5px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── SLIDER GALERIE SUR LA CARTE ─── */
+  .card-gallery {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .card-gallery-slides {
+    display: flex;
+    height: 100%;
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .card-gallery-slide {
+    min-width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .card-gallery-emoji {
+    min-width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    flex-shrink: 0;
+  }
+
+  .card-gallery-prev, .card-gallery-next {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.55);
+    border: none;
+    color: white;
+    width: 30px; height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 3;
+  }
+
+  .card-gallery-prev { left: 8px; }
+  .card-gallery-next { right: 8px; }
+  .card-gallery-prev:hover, .card-gallery-next:hover { background: var(--accent); }
+
+  .product-card:hover .card-gallery-prev,
+  .product-card:hover .card-gallery-next { opacity: 1; }
+
+  .card-gallery-dots {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    z-index: 3;
+  }
+
+  .card-gallery-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .card-gallery-dot.active { background: white; transform: scale(1.3); }
+
+  .card-gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,60,0,0.05);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .product-card:hover .card-gallery-overlay { opacity: 1; }
+
+  .photos-count-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 7px;
+    letter-spacing: 1px;
+    z-index: 3;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .hero-stats { position: static; margin-top: 3rem; flex-wrap: wrap; justify-content: flex-start; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    nav { display: none; }
+    .footer-grid { grid-template-columns: 1fr; }
+    .btn-seller span { display: none; }
+    .hero-stats { gap: 2rem; }
+  }
+
+  /* ─── ACTIVE CATEGORY BANNER ─── */
+  .active-cat-banner {
+    background: var(--bg3);
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .active-cat-banner.visible { display: flex; }
+
+  .active-cat-info { display: flex; align-items: center; gap: 1rem; }
+  .active-cat-icon { font-size: 2rem; }
+
+  .active-cat-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .active-cat-desc { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  .clear-cat {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .clear-cat:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <a href="#" class="logo">
+    <span class="logo-icon">🚐</span>
+    LA <span>ROULOTTE</span>
+    <div style="display:flex;flex-direction:column;justify-content:center;">
+      <span class="logo-sub">Marketplace des Gens du Voyage</span>
+    </div>
+  </a>
+
+  <nav>
+    <a href="#annonces">Annonces</a>
+    <a href="#about">À propos</a>
+    <a href="#contact">Contact</a>
+  </nav>
+
+  <div class="header-actions">
+    <!-- Boutons visiteur -->
+    <button class="btn-login" id="btnLogin" onclick="openModal('loginModal')">Se connecter</button>
+    <button class="btn-seller" id="btnBecomeSeller" onclick="openModal('registerModal')">
+      ⭐ <span>Devenir Vendeur</span>
     </button>
-  );
+
+    <!-- Boutons vendeur connecté -->
+    <button class="btn-add-article" id="btnAddArticle" onclick="openModal('articleModal')">
+      ＋ Déposer une annonce
+    </button>
+    <button class="btn-account" id="btnAccount" onclick="openAccountMenu()">
+      👤 <span id="accountName">Mon compte</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag">La Marketplace des Gens du Voyage</div>
+    <h1>ACHÈTE, VENDS<br><span class="line2">ENTRE</span>VOYAGEURS</h1>
+    <p class="hero-desc">La Roulotte, c'est la marketplace 100% dédiée aux gens du voyage. Caravanes, camping-cars, chevaux, attelages, terrains — trouvez tout ce qu'il vous faut, partout en France.</p>
+    <div class="hero-btns">
+      <a href="#annonces" class="btn-primary">Voir les annonces</a>
+      <button class="btn-outline" onclick="openModal('registerModal')">Vendre un article</button>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num" id="statAnnonces">0</div>
+      <div class="stat-label">Annonces</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statVendeurs">0</div>
+      <div class="stat-label">Vendeurs</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Gratuit</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TICKER ═══ -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <span class="ticker-item">Annonces gratuites pour tous les vendeurs<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Caravanes, camping-cars, fourgons aménagés<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Chevaux & attelages de qualité<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Terrains & emplacements à louer ou vendre<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Matériel de vie, tapis, bijoux traditionnels<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Contact direct avec le vendeur, sans intermédiaire<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Annonces gratuites pour tous les vendeurs<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Caravanes, camping-cars, fourgons aménagés<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Chevaux & attelages de qualité<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Terrains & emplacements à louer ou vendre<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Matériel de vie, tapis, bijoux traditionnels<span class="ticker-dot"></span></span>
+    <span class="ticker-item">Contact direct avec le vendeur, sans intermédiaire<span class="ticker-dot"></span></span>
+  </div>
+</div>
+
+<!-- ═══ ANNONCES ═══ -->
+<section id="annonces">
+  <div class="section-header">
+    <div class="section-title">LES <span>ANNONCES</span></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <div class="search-input-wrap">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input class="search-input" type="text" id="searchInput" placeholder="Rechercher une caravane, un cheval, un terrain..." oninput="filterArticles()">
+    </div>
+    <button class="search-btn" onclick="filterArticles()">RECHERCHER</button>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="categories-label">— Catégorie</div>
+  <div class="categories-grid" id="categoriesGrid"></div>
+
+  <!-- ACTIVE CAT BANNER -->
+  <div class="active-cat-banner" id="activeCatBanner">
+    <div class="active-cat-info">
+      <div class="active-cat-icon" id="activeCatIcon"></div>
+      <div>
+        <div class="active-cat-name" id="activeCatName"></div>
+        <div class="active-cat-desc" id="activeCatDesc"></div>
+      </div>
+    </div>
+    <button class="clear-cat" onclick="clearCategory()">✕ Voir tout</button>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="results-count" id="resultsCount">Affichage de <span>0</span> annonces</div>
+    <div class="sort-wrap">
+      <span class="sort-label">Trier :</span>
+      <select class="sort-select" id="sortSelect" onchange="filterArticles()">
+        <option value="default">Les plus récentes</option>
+        <option value="price-asc">Prix croissant</option>
+        <option value="price-desc">Prix décroissant</option>
+        <option value="name-asc">Nom A–Z</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="products-grid" id="productsGrid">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">Aucune annonce trouvée</div>
+      <p class="empty-desc">Soyez le premier à déposer une annonce dans cette catégorie !</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<div class="features" id="about">
+  <div class="feature">
+    <div class="feature-icon">🆓</div>
+    <div>
+      <div class="feature-title">100% Gratuit</div>
+      <div class="feature-desc">Déposez autant d'annonces que vous voulez, sans frais, sans commission.</div>
+    </div>
+  </div>
+  <div class="feature">
+    <div class="feature-icon">📞</div>
+    <div>
+      <div class="feature-title">Contact Direct</div>
+      <div class="feature-desc">Appelez directement le vendeur. Pas d'intermédiaire, pas de messagerie compliquée.</div>
+    </div>
+  </div>
+  <div class="feature">
+    <div class="feature-icon">🚐</div>
+    <div>
+      <div class="feature-title">Pour Nous, Par Nous</div>
+      <div class="feature-desc">La seule marketplace pensée 100% pour les gens du voyage, par des voyageurs.</div>
+    </div>
+  </div>
+  <div class="feature">
+    <div class="feature-icon">📍</div>
+    <div>
+      <div class="feature-title">Partout en France</div>
+      <div class="feature-desc">Des annonces dans toutes les régions. Filtrez par secteur géographique.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="logo">🚐 LA <span>ROULOTTE</span></a>
+      <p class="footer-tagline">La marketplace des gens du voyage. Vendez et achetez entre particuliers, partout en France — caravanes, chevaux, terrains, matériel et bien plus.</p>
+      <div class="footer-socials">
+        <a class="social-btn" href="#">📘</a>
+        <a class="social-btn" href="#">📸</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Annonces</h4>
+      <ul>
+        <li><a href="#" onclick="selectCategory('caravanes');return false;">Caravanes & Camping-cars</a></li>
+        <li><a href="#" onclick="selectCategory('chevaux');return false;">Chevaux & Attelages</a></li>
+        <li><a href="#" onclick="selectCategory('terrains');return false;">Terrains & Emplacements</a></li>
+        <li><a href="#" onclick="selectCategory('materiel');return false;">Matériel de vie</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Vendeurs</h4>
+      <ul>
+        <li><a href="#" onclick="openModal('registerModal');return false;">Devenir vendeur</a></li>
+        <li><a href="#" onclick="openModal('loginModal');return false;">Se connecter</a></li>
+        <li><a href="#" onclick="openModal('articleModal');return false;">Déposer une annonce</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Légal</h4>
+      <ul>
+        <li><a href="#">Mentions légales</a></li>
+        <li><a href="#">CGU</a></li>
+        <li><a href="#">Confidentialité</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2025 <span>LA ROULOTTE</span>. Tous droits réservés.</div>
+    <div class="footer-copy">Fait avec ❤️ pour les gens du voyage</div>
+  </div>
+</footer>
+
+<!-- ═══ MODAL : INSCRIPTION VENDEUR ═══ -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">DEVENIR <span>VENDEUR</span></div>
+      <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info">
+        ⭐ Créez votre compte vendeur gratuitement et déposez autant d'annonces que vous souhaitez !
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prénom *</label>
+        <input class="form-input" type="text" id="reg-prenom" placeholder="Votre prénom">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nom *</label>
+        <input class="form-input" type="text" id="reg-nom" placeholder="Votre nom">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Numéro de téléphone *</label>
+        <input class="form-input" type="tel" id="reg-tel" placeholder="06 12 34 56 78">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Région / Département *</label>
+        <select class="form-select" id="reg-region">
+          <option value="">— Choisir une région —</option>
+          <option>Île-de-France</option><option>Auvergne-Rhône-Alpes</option>
+          <option>Provence-Alpes-Côte d'Azur</option><option>Occitanie</option>
+          <option>Nouvelle-Aquitaine</option><option>Bretagne</option>
+          <option>Pays de la Loire</option><option>Hauts-de-France</option>
+          <option>Grand Est</option><option>Normandie</option>
+          <option>Bourgogne-Franche-Comté</option><option>Centre-Val de Loire</option>
+          <option>Corse</option><option>DOM-TOM</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe *</label>
+        <input class="form-input" type="password" id="reg-pass" placeholder="Choisissez un mot de passe">
+      </div>
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" id="reg-cgu"> J'accepte les conditions générales d'utilisation
+        </label>
+      </div>
+      <button class="form-btn gold" onclick="registerSeller()">CRÉER MON COMPTE VENDEUR</button>
+      <div class="form-divider">Déjà vendeur ?</div>
+      <button class="form-btn" style="background:var(--bg3);border:1px solid var(--border);" onclick="closeModal('registerModal');openModal('loginModal')">SE CONNECTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL : CONNEXION ═══ -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">SE <span>CONNECTER</span></div>
+      <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Téléphone</label>
+        <input class="form-input" type="tel" id="login-tel" placeholder="06 12 34 56 78">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input class="form-input" type="password" id="login-pass" placeholder="Votre mot de passe">
+      </div>
+      <button class="form-btn" onclick="loginSeller()">SE CONNECTER</button>
+      <div class="form-divider">Pas encore vendeur ?</div>
+      <button class="form-btn gold" onclick="closeModal('loginModal');openModal('registerModal')">CRÉER UN COMPTE VENDEUR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL : DÉPOSER / MODIFIER ANNONCE ═══ -->
+<div class="modal-overlay" id="articleModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="articleModalTitle">DÉPOSER UNE <span>ANNONCE</span></div>
+      <button class="modal-close" onclick="closeModal('articleModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="article-edit-id">
+      <div class="form-group">
+        <label class="form-label">Titre de l'annonce *</label>
+        <input class="form-input" type="text" id="art-titre" placeholder="Ex: Caravane Fendt 2018 excellent état">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Catégorie *</label>
+          <select class="form-select" id="art-categorie">
+            <option value="">— Catégorie —</option>
+            <option value="caravanes">🚐 Caravanes</option>
+            <option value="camping-cars">🏕️ Camping-cars</option>
+            <option value="fourgons">🚌 Fourgons aménagés</option>
+            <option value="chevaux">🐎 Chevaux</option>
+            <option value="attelages">⛓️ Attelages & Remorques</option>
+            <option value="terrains">🏡 Terrains & Emplacements</option>
+            <option value="materiel">🔧 Matériel de vie</option>
+            <option value="bijoux">💍 Bijoux & Or</option>
+            <option value="tapis">🏺 Tapis & Déco</option>
+            <option value="vehicules">🚗 Véhicules</option>
+            <option value="vetements">👗 Vêtements</option>
+            <option value="autre">📦 Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prix (€) *</label>
+          <input class="form-input" type="number" id="art-prix" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description *</label>
+        <textarea class="form-textarea" id="art-desc" placeholder="Décrivez votre article en détail : état, année, entretien..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Région / Ville</label>
+        <input class="form-input" type="text" id="art-lieu" placeholder="Ex: Lyon (69), Marseille (13)...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photos (jusqu'à 4 photos)</label>
+        <div class="upload-zone" onclick="document.getElementById('art-photos-input').click()">
+          <input type="file" id="art-photos-input" accept="image/*" multiple onchange="handlePhotosUpload(event)">
+          <div class="upload-zone-icon">📷</div>
+          <p>Cliquez pour ajouter des photos</p>
+          <span>JPG, PNG, WEBP — Max 4 photos</span>
+        </div>
+        <div class="photos-preview" id="photosPreview"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji représentatif <span style="color:var(--muted);font-size:0.7em;">(si pas de photo)</span></label>
+        <input class="form-input" type="text" id="art-emoji" placeholder="🚐 🐎 🏡 💍 ..." maxlength="4">
+      </div>
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" id="art-nego"> Prix négociable
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" id="art-urgent"> Vente urgente
+        </label>
+      </div>
+      <button class="form-btn" onclick="saveArticle()">PUBLIER L'ANNONCE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL : CONTACTER VENDEUR ═══ -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">CONTACTER LE <span>VENDEUR</span></div>
+      <button class="modal-close" onclick="closeModal('contactModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="contact-seller-info" id="contactSellerInfo"></div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem;">Numéro de téléphone :</p>
+      <div class="contact-modal-phone" id="contactPhone"></div>
+      <div class="modal-info">📞 Appelez directement le vendeur. Mentionnez l'annonce que vous avez vue sur La Roulotte.</div>
+      <button class="form-btn" onclick="closeModal('contactModal')">FERMER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL : MON COMPTE ═══ -->
+<div class="modal-overlay" id="accountModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">MON <span>COMPTE</span></div>
+      <button class="modal-close" onclick="closeModal('accountModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="accountInfo" style="margin-bottom:1.5rem;"></div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;margin-bottom:1rem;">MES <span style="color:var(--accent)">ANNONCES</span></h3>
+      <div id="myArticlesList" style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;"></div>
+      <button class="form-btn" style="background:var(--bg3);border:1px solid var(--border);" onclick="logout()">SE DÉCONNECTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL : SUPPRIMER CONFIRMATION ═══ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">SUPPRIMER <span>L'ANNONCE</span></div>
+      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);margin-bottom:1.5rem;">Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.</p>
+      <button class="form-btn" style="background:#cc0000;" onclick="confirmDelete()">OUI, SUPPRIMER</button>
+      <button class="form-btn" style="background:var(--bg3);border:1px solid var(--border);margin-top:0.75rem;" onclick="closeModal('deleteModal')">ANNULER</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-icon" id="toastIcon">✅</div>
+  <div class="toast-msg" id="toastMsg">Action réussie !</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// CATÉGORIES
+// ════════════════════════════════════════════
+const CATEGORIES = [
+  { id:'tout',        label:'Tout voir',           icon:'🏪', desc:'Toutes les annonces disponibles' },
+  { id:'caravanes',   label:'Caravanes',           icon:'🚐', desc:'Caravanes de toutes marques et modèles' },
+  { id:'camping-cars',label:'Camping-cars',        icon:'🏕️', desc:'Camping-cars, vans aménagés et fourgons' },
+  { id:'fourgons',    label:'Fourgons',            icon:'🚌', desc:'Fourgons aménagés, vans, utilitaires' },
+  { id:'chevaux',     label:'Chevaux',             icon:'🐎', desc:'Chevaux de toutes races, poneys, mules' },
+  { id:'attelages',   label:'Attelages',           icon:'⛓️', desc:'Attelages, remorques chevaux, matériel équestre' },
+  { id:'terrains',    label:'Terrains',            icon:'🏡', desc:'Terrains, emplacements, propriétés' },
+  { id:'materiel',    label:'Matériel',            icon:'🔧', desc:'Matériel de vie quotidienne, outillage' },
+  { id:'bijoux',      label:'Bijoux & Or',         icon:'💍', desc:'Bijoux, or, argent, montres' },
+  { id:'tapis',       label:'Tapis & Déco',        icon:'🏺', desc:'Tapis, décoration, objets d\'artisanat' },
+  { id:'vehicules',   label:'Véhicules',           icon:'🚗', desc:'Voitures, motos, camions, quad' },
+  { id:'vetements',   label:'Vêtements',           icon:'👗', desc:'Vêtements, chaussures, accessoires mode' },
+  { id:'autre',       label:'Autre',               icon:'📦', desc:'Divers et objets non classés' },
+];
+
+// ════════════════════════════════════════════
+// DONNÉES EXEMPLES (en localStorage on gère les vraies)
+// ════════════════════════════════════════════
+const DEMO_ARTICLES = [
+  {
+    id: 'demo1',
+    titre: 'Caravane Hobby 540 UL – Très bon état',
+    cat: 'caravanes',
+    emoji: '🚐',
+    prix: 14500,
+    nego: false,
+    urgent: false,
+    desc: 'Caravane 2019, 540 UL, très bien entretenue. Banquette, salle de bain séparée, cuisine équipée. Aucun défaut.',
+    lieu: 'Toulouse (31)',
+    sellerId: 'demo',
+    sellerPrenom: 'Marc',
+    sellerNom: 'Santos',
+    sellerTel: '06 78 12 34 56',
+    sellerRegion: 'Occitanie',
+    date: Date.now() - 86400000 * 2,
+  },
+  {
+    id: 'demo2',
+    titre: 'Cheval Irish Cob 8 ans – Calme & bombard',
+    cat: 'chevaux',
+    emoji: '🐎',
+    prix: 4200,
+    nego: true,
+    urgent: false,
+    desc: 'Magnifique Irish Cob pie tobiano, 8 ans, bombard, idéal famille. Bon aux soins, facile à travailler.',
+    lieu: 'Montpellier (34)',
+    sellerId: 'demo',
+    sellerPrenom: 'Rosa',
+    sellerNom: 'Garcia',
+    sellerTel: '07 45 67 89 01',
+    sellerRegion: 'Occitanie',
+    date: Date.now() - 86400000 * 5,
+  },
+  {
+    id: 'demo3',
+    titre: 'Terrain viabilisé 2000m² – Hérault',
+    cat: 'terrains',
+    emoji: '🏡',
+    prix: 55000,
+    nego: true,
+    urgent: true,
+    desc: 'Terrain plat de 2000m², eau et électricité en limite. Accès camion facilité. Titre de propriété. Vente urgente.',
+    lieu: 'Béziers (34)',
+    sellerId: 'demo',
+    sellerPrenom: 'Antoine',
+    sellerNom: 'Borrelli',
+    sellerTel: '06 34 56 78 90',
+    sellerRegion: 'Occitanie',
+    date: Date.now() - 86400000 * 1,
+  },
+  {
+    id: 'demo4',
+    titre: 'Camping-car Pilote 650 FJ – 2021',
+    cat: 'camping-cars',
+    emoji: '🏕️',
+    prix: 49000,
+    nego: false,
+    urgent: false,
+    desc: 'Camping-car 2021, 35 000 km, lit central, garage arrière, panneau solaire, 4 couchettes. Parfait état.',
+    lieu: 'Lyon (69)',
+    sellerId: 'demo',
+    sellerPrenom: 'Marie',
+    sellerNom: 'Lovell',
+    sellerTel: '06 11 22 33 44',
+    sellerRegion: 'Auvergne-Rhône-Alpes',
+    date: Date.now() - 86400000 * 3,
+  },
+  {
+    id: 'demo5',
+    titre: 'Lot de bijoux or 18 carats',
+    cat: 'bijoux',
+    emoji: '💍',
+    prix: 3800,
+    nego: true,
+    urgent: false,
+    desc: 'Vente d\'un lot de bijoux en or 18 carats : bracelets, bagues, colliers. Poids total environ 95g. Facture possible.',
+    lieu: 'Marseille (13)',
+    sellerId: 'demo',
+    sellerPrenom: 'Lola',
+    sellerNom: 'Petrov',
+    sellerTel: '07 88 99 00 11',
+    sellerRegion: 'Provence-Alpes-Côte d\'Azur',
+    date: Date.now() - 86400000 * 7,
+  },
+  {
+    id: 'demo6',
+    titre: 'Remorque chevaux 3 places – excellent état',
+    cat: 'attelages',
+    emoji: '⛓️',
+    prix: 6500,
+    nego: false,
+    urgent: false,
+    desc: 'Remorque Lenckers 3 places, 2018, révisée, pneus neufs. Sellerie intégrée. Accessible rapidement.',
+    lieu: 'Nantes (44)',
+    sellerId: 'demo',
+    sellerPrenom: 'David',
+    sellerNom: 'Romano',
+    sellerTel: '06 55 44 33 22',
+    sellerRegion: 'Pays de la Loire',
+    date: Date.now() - 86400000 * 4,
+  },
+];
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let selectedCategory = 'tout';
+let currentUser = null; // { id, prenom, nom, tel, region, pass }
+let pendingDeleteId = null;
+let editingArticleId = null;
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+window.onload = function() {
+  // Charger session
+  const saved = localStorage.getItem('roulotte_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    updateHeaderForUser();
+  }
+
+  // Charger les articles démo si aucun article en localStorage
+  if (!localStorage.getItem('roulotte_articles_initialized')) {
+    localStorage.setItem('roulotte_articles', JSON.stringify(DEMO_ARTICLES));
+    localStorage.setItem('roulotte_articles_initialized', '1');
+  }
+
+  renderCategories();
+  filterArticles();
+  updateStats();
+};
+
+function getArticles() {
+  return JSON.parse(localStorage.getItem('roulotte_articles') || '[]');
 }
 
-function MsgBody({ content }) {
-  const ref = useRef();
-  useEffect(() => {
-    if (!ref.current) return;
-    ref.current.querySelectorAll("pre").forEach(pre => {
-      if (pre.querySelector(".cpbtn")) return;
-      pre.style.position = "relative";
-      const code = pre.querySelector("code")?.textContent || pre.textContent;
-      const btn = document.createElement("button");
-      btn.className = "cpbtn";
-      btn.textContent = "Copier";
-      btn.style.cssText = "position:absolute;top:8px;right:10px;background:#111128;border:1px solid #1c1c2e;border-radius:5px;color:#555;font-size:11px;padding:3px 9px;cursor:pointer;font-family:Arial;font-weight:700;";
-      btn.onclick = () => { navigator.clipboard.writeText(code); btn.textContent = "✓"; btn.style.color = "#55b870"; setTimeout(() => { btn.textContent = "Copier"; btn.style.color = "#555"; }, 1800); };
-      pre.appendChild(btn);
-    });
-  }, [content]);
-  return <div ref={ref} dangerouslySetInnerHTML={{ __html: fmt(content) }} />;
+function saveArticles(arr) {
+  localStorage.setItem('roulotte_articles', JSON.stringify(arr));
 }
 
-export default function App() {
-  const [screen, setScreen] = useState("auth"); // auth | app
-  const [tab, setTab] = useState("login");
-  const [authErr, setAuthErr] = useState("");
-  const [authOk, setAuthOk] = useState("");
-  const [user, setUser] = useState(null);
-  const [convs, setConvs] = useState({});
-  const [cid, setCid] = useState(null);
-  const [msgs, setMsgs] = useState([]);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [pendingImg, setPendingImg] = useState(null);
-  const msgsEnd = useRef();
-  const fileRef = useRef();
+function getSellers() {
+  return JSON.parse(localStorage.getItem('roulotte_sellers') || '[]');
+}
 
-  // fields
-  const [le, setLe] = useState(""); const [lp, setLp] = useState("");
-  const [ru, setRu] = useState(""); const [re, setRe] = useState(""); const [rp, setRp] = useState("");
+function saveSellers(arr) {
+  localStorage.setItem('roulotte_sellers', JSON.stringify(arr));
+}
 
-  useEffect(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem("_crg_s") || "null");
-      if (s?.email) { const U = gU(); if (U[s.email]) startApp(s.name, s.email); }
-    } catch {}
-  }, []);
+function updateStats() {
+  const articles = getArticles();
+  const sellers = getSellers();
+  document.getElementById('statAnnonces').textContent = articles.length;
+  document.getElementById('statVendeurs').textContent = sellers.length + 4; // +démo
+}
 
-  useEffect(() => { msgsEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+// ════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════
+function registerSeller() {
+  const prenom = document.getElementById('reg-prenom').value.trim();
+  const nom = document.getElementById('reg-nom').value.trim();
+  const tel = document.getElementById('reg-tel').value.trim();
+  const region = document.getElementById('reg-region').value;
+  const pass = document.getElementById('reg-pass').value;
+  const cgu = document.getElementById('reg-cgu').checked;
 
-  function startApp(name, email) {
-    const u = { name, email };
-    setUser(u);
-    localStorage.setItem("_crg_s", JSON.stringify(u));
-    const c = gC(email);
-    setConvs(c);
-    setScreen("app");
-    // start new chat
-    const id = gid();
-    const nc = { id, title: "Nouvelle conversation", msgs: [], ts: Date.now() };
-    const nc2 = { ...c, [id]: nc };
-    setConvs(nc2);
-    sC(email, nc2);
-    setCid(id);
-    setMsgs([]);
-  }
+  if (!prenom || !nom || !tel || !region || !pass) return showToast('Remplissez tous les champs obligatoires', false);
+  if (!cgu) return showToast('Acceptez les CGU pour continuer', false);
 
-  function login() {
-    setAuthErr(""); setAuthOk("");
-    const e = le.trim().toLowerCase(), p = lp;
-    if (!e || !p) return setAuthErr("Remplissez tous les champs.");
-    const U = gU();
-    if (!U[e]) return setAuthErr("Aucun compte trouvé pour cet email.");
-    if (U[e].p !== btoa(p)) return setAuthErr("Mot de passe incorrect.");
-    startApp(U[e].n, e);
-  }
+  const sellers = getSellers();
+  if (sellers.find(s => s.tel === tel)) return showToast('Ce numéro est déjà utilisé', false);
 
-  function register() {
-    setAuthErr(""); setAuthOk("");
-    const n = ru.trim(), e = re.trim().toLowerCase(), p = rp;
-    if (!n || !e || !p) return setAuthErr("Remplissez tous les champs.");
-    if (n.length < 3) return setAuthErr("Nom trop court (min. 3 caractères).");
-    if (!e.includes("@")) return setAuthErr("Email invalide.");
-    if (p.length < 6) return setAuthErr("Mot de passe trop court (min. 6 caractères).");
-    const U = gU();
-    if (U[e]) return setAuthErr("Un compte existe déjà avec cet email.");
-    U[e] = { p: btoa(p), n, d: Date.now() }; sU(U);
-    setAuthOk("Compte créé ! Connexion en cours...");
-    setTimeout(() => startApp(n, e), 800);
-  }
-
-  function logout() {
-    localStorage.removeItem("_crg_s");
-    setUser(null); setConvs({}); setCid(null); setMsgs([]);
-    setLe(""); setLp(""); setAuthErr(""); setAuthOk("");
-    setScreen("auth");
-  }
-
-  function newChat() {
-    const id = gid();
-    const nc = { id, title: "Nouvelle conversation", msgs: [], ts: Date.now() };
-    const nc2 = { ...convs, [id]: nc };
-    setConvs(nc2); sC(user.email, nc2);
-    setCid(id); setMsgs([]);
-  }
-
-  function loadConv(id) {
-    setCid(id);
-    setMsgs(convs[id]?.msgs || []);
-  }
-
-  function delConv(id, e) {
-    e.stopPropagation();
-    const nc = { ...convs }; delete nc[id]; setConvs(nc); sC(user.email, nc);
-    if (id === cid) newChat();
-  }
-
-  function updateConv(id, newMsgs, title) {
-    setConvs(prev => {
-      const nc = { ...prev, [id]: { ...prev[id], msgs: newMsgs, title: title || prev[id].title, ts: Date.now() } };
-      sC(user.email, nc);
-      return nc;
-    });
-  }
-
-  async function send() {
-    if (busy) return;
-    const txt = input.trim();
-    if (!txt && !pendingImg) return;
-
-    const userMsg = { role: "user", content: txt || "[Image envoyée]" };
-    if (pendingImg) userMsg.img = pendingImg.url;
-
-    const currentConv = convs[cid];
-    const newMsgs = [...(currentConv?.msgs || []), userMsg];
-    const newTitle = currentConv?.title === "Nouvelle conversation" && txt ? txt.slice(0, 44) + (txt.length > 44 ? "…" : "") : currentConv?.title;
-    updateConv(cid, newMsgs, newTitle);
-    setMsgs(newMsgs);
-    setInput("");
-
-    const img = pendingImg;
-    setPendingImg(null);
-    setBusy(true);
-
-    try {
-      // Build API messages
-      const apiMsgs = newMsgs.map((m, i) => {
-        const isLast = i === newMsgs.length - 1;
-        if (isLast && img && m.role === "user") {
-          return { role: "user", content: [
-            { type: "image", source: { type: "base64", media_type: img.mime, data: img.b64 } },
-            { type: "text", text: m.content || "Analyse cette image." }
-          ]};
-        }
-        return { role: m.role === "assistant" ? "assistant" : "user", content: m.content };
-      });
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: SYSTEM,
-          messages: apiMsgs
-        })
-      });
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || "Pas de réponse.";
-      const finalMsgs = [...newMsgs, { role: "assistant", content: reply }];
-      setMsgs(finalMsgs);
-      updateConv(cid, finalMsgs, newTitle);
-    } catch (err) {
-      const errMsg = [...newMsgs, { role: "assistant", content: "❌ **Erreur :** " + err.message }];
-      setMsgs(errMsg);
-    }
-    setBusy(false);
-  }
-
-  function handleImg(e) {
-    const f = e.target.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      setPendingImg({ b64: ev.target.result.split(",")[1], mime: f.type, url: ev.target.result });
-    };
-    r.readAsDataURL(f);
-    e.target.value = "";
-  }
-
-  function handleKey(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-  }
-
-  const sortedConvs = Object.values(convs).sort((a, b) => b.ts - a.ts);
-  const now = new Date();
-  const timeStr = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
-
-  const S = {
-    body: { fontFamily: "Arial, sans-serif", background: "#08080f", color: "#e0e0e0", height: "100vh", display: "flex", overflow: "hidden" },
-    // AUTH
-    authWrap: { position: "fixed", inset: 0, background: "#08080f", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-    acard: { background: "#0f0f1a", border: "1px solid #1c1c2e", borderRadius: 14, padding: "50px 42px", width: 420, boxShadow: "0 24px 64px rgba(0,0,0,.6)" },
-    alogo: { width: 68, height: 68, background: "linear-gradient(135deg,#1a3a8f,#0d2060)", borderRadius: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 16, boxShadow: "0 0 30px rgba(30,80,200,.3)" },
-    tabRow: { display: "flex", background: "#0a0a14", borderRadius: 9, padding: 4, marginBottom: 30 },
-    tab: active => ({ flex: 1, textAlign: "center", padding: 10, borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 700, letterSpacing: ".5px", color: active ? "#fff" : "#444", background: active ? "#1a3a8f" : "transparent", transition: "all .2s" }),
-    fld: { marginBottom: 18 },
-    lbl: { display: "block", fontSize: 11, fontWeight: 700, color: "#444", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 8 },
-    inp: { width: "100%", padding: "12px 15px", background: "#0a0a14", border: "1px solid #1c1c2e", borderRadius: 8, color: "#e0e0e0", fontFamily: "Arial", fontSize: 14, outline: "none" },
-    abtn: { width: "100%", padding: 13, background: "linear-gradient(135deg,#1a3a8f,#0d2060)", border: "none", borderRadius: 8, color: "#fff", fontFamily: "Arial", fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: "pointer", marginTop: 6 },
-    // SIDEBAR
-    sb: { width: 258, background: "#0a0a14", borderRight: "1px solid #141424", display: "flex", flexDirection: "column", flexShrink: 0 },
-    sbTop: { padding: "18px 16px", borderBottom: "1px solid #141424", display: "flex", alignItems: "center", gap: 12 },
-    sbLogo: { width: 36, height: 36, background: "linear-gradient(135deg,#1a3a8f,#0d2060)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 },
-    nb: { margin: 12, padding: "10px 14px", background: "transparent", border: "1px solid #1c1c2e", borderRadius: 8, color: "#888", fontFamily: "Arial", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 },
-    hl: { padding: "5px 16px", fontSize: 10, fontWeight: 700, color: "#282838", letterSpacing: "1.5px", textTransform: "uppercase" },
-    hi: active => ({ display: "flex", alignItems: "center", padding: "9px 10px", borderRadius: 8, cursor: "pointer", gap: 8, border: `1px solid ${active ? "#1a3a8f" : "transparent"}`, background: active ? "#0f1828" : "transparent", marginBottom: 2 }),
-    hiTxt: active => ({ flex: 1, fontSize: 13, color: active ? "#ddd" : "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }),
-    hd: { background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 13, padding: "2px 5px" },
-    sbFoot: { borderTop: "1px solid #141424", padding: 12 },
-    urow: { display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: 8 },
-    uav: { width: 32, height: 32, background: "linear-gradient(135deg,#1a3a8f,#0d2060)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 },
-    // MAIN
-    mn: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
-    tbar: { height: 54, borderBottom: "1px solid #141424", display: "flex", alignItems: "center", padding: "0 24px", background: "#0a0a14", flexShrink: 0, gap: 12 },
-    badge: { fontSize: 11, color: "#2a5abf", background: "#0d1830", border: "1px solid #1a3a8f", padding: "3px 10px", borderRadius: 20 },
-    msgsArea: { flex: 1, overflowY: "auto", padding: "28px 0" },
-    welcome: { height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40 },
-    wlogo: { width: 76, height: 76, background: "linear-gradient(135deg,#1a3a8f,#0d2060)", borderRadius: 20, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 700, color: "#fff", marginBottom: 22, boxShadow: "0 0 40px rgba(20,60,180,.25)" },
-    msg: { maxWidth: 800, margin: "0 auto 22px", padding: "0 28px" },
-    mh: { display: "flex", alignItems: "center", gap: 10, marginBottom: 9 },
-    mav: isU => ({ width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, background: isU ? "linear-gradient(135deg,#1a3a8f,#0d2060)" : "#090e1f", border: isU ? "none" : "1px solid #1a3a8f" }),
-    mwho: { fontSize: 13, fontWeight: 700, color: "#ccc" },
-    mwhen: { fontSize: 11, color: "#252535", marginLeft: 4 },
-    mbUser: { background: "#0b1220", border: "1px solid #141f38", borderRadius: "0 10px 10px 10px", padding: "14px 16px", fontSize: 14, lineHeight: 1.8, color: "#ccc" },
-    mbAi: { paddingLeft: 38, fontSize: 14, lineHeight: 1.8, color: "#bbb" },
-    // INPUT
-    iz: { borderTop: "1px solid #141424", padding: "16px 28px 20px", background: "#0a0a14", flexShrink: 0 },
-    ibox: focused => ({ maxWidth: 800, margin: "0 auto", background: "#0f0f1a", border: `1px solid ${focused ? "#2a5abf" : "#1c1c2e"}`, borderRadius: 13, transition: "border-color .2s" }),
-    irow: { display: "flex", alignItems: "flex-end", padding: "8px 8px 8px 16px", gap: 6 },
-    ta: { flex: 1, background: "none", border: "none", outline: "none", color: "#e0e0e0", fontFamily: "Arial", fontSize: 14, resize: "none", minHeight: 40, maxHeight: 160, lineHeight: 1.6, padding: "8px 0" },
-    icobtn: { width: 36, height: 36, borderRadius: 8, background: "transparent", border: "1px solid transparent", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 },
-    sendbtn: dis => ({ width: 36, height: 36, borderRadius: 8, background: dis ? "#0a0a20" : "linear-gradient(135deg,#1a3a8f,#0d2060)", border: "none", color: dis ? "#333" : "#fff", cursor: dis ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }),
-    hint: { maxWidth: 800, margin: "8px auto 0", fontSize: 11, color: "#1a1a28", textAlign: "center" },
-    dot1: { width: 8, height: 8, borderRadius: "50%", background: "#1a3a8f", display: "inline-block", margin: "0 2px", animation: "bounce 1.2s ease infinite" },
+  const seller = {
+    id: 'u_' + Date.now(),
+    prenom, nom, tel, region, pass
   };
 
-  if (screen === "auth") return (
-    <div style={S.authWrap}>
-      <style>{`
-        input::placeholder{color:#252535}
-        @keyframes bounce{0%,80%,100%{transform:scale(.7);opacity:.3}40%{transform:scale(1);opacity:1}}
-        .mbai-content p{margin-bottom:9px} .mbai-content p:last-child{margin-bottom:0}
-        .mbai-content strong{color:#fff} .mbai-content ul,.mbai-content ol{padding-left:20px;margin:7px 0}
-        .mbai-content li{margin:4px 0} .mbai-content h1,.mbai-content h2,.mbai-content h3{color:#fff;margin:14px 0 7px;font-size:15px}
-        .mbai-content pre{background:#050508;border:1px solid #1c1c2e;border-radius:8px;padding:16px;margin:10px 0;overflow-x:auto;position:relative}
-        .mbai-content code{font-family:'Courier New',monospace;font-size:13px;color:#7ab8f5}
-        .mbai-content pre code{display:block}
-      `}</style>
-      <div style={S.acard}>
-        <div style={{ textAlign: "center", marginBottom: 38 }}>
-          <div style={{ ...S.alogo, display: "flex" }}>CRG</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: 1, marginTop: 4 }}>CRG IA</h1>
-          <p style={{ fontSize: 13, color: "#444", marginTop: 5 }}>Intelligence Artificielle</p>
-        </div>
-        <div style={S.tabRow}>
-          <div style={S.tab(tab==="login")} onClick={() => { setTab("login"); setAuthErr(""); setAuthOk(""); }}>CONNEXION</div>
-          <div style={S.tab(tab==="reg")} onClick={() => { setTab("reg"); setAuthErr(""); setAuthOk(""); }}>INSCRIPTION</div>
-        </div>
-        {tab === "login" ? <>
-          <div style={S.fld}><label style={S.lbl}>Adresse email</label><input style={S.inp} type="email" placeholder="votre@email.com" value={le} onChange={e=>setLe(e.target.value)}/></div>
-          <div style={S.fld}><label style={S.lbl}>Mot de passe</label><input style={S.inp} type="password" placeholder="Votre mot de passe" value={lp} onChange={e=>setLp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()}/></div>
-          <button style={S.abtn} onClick={login}>SE CONNECTER</button>
-        </> : <>
-          <div style={S.fld}><label style={S.lbl}>Nom d'utilisateur</label><input style={S.inp} type="text" placeholder="Choisissez un nom" value={ru} onChange={e=>setRu(e.target.value)}/></div>
-          <div style={S.fld}><label style={S.lbl}>Adresse email</label><input style={S.inp} type="email" placeholder="votre@email.com" value={re} onChange={e=>setRe(e.target.value)}/></div>
-          <div style={S.fld}><label style={S.lbl}>Mot de passe</label><input style={S.inp} type="password" placeholder="Minimum 6 caractères" value={rp} onChange={e=>setRp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&register()}/></div>
-          <button style={S.abtn} onClick={register}>CRÉER MON COMPTE</button>
-        </>}
-        {authErr && <div style={{ fontSize: 12, textAlign: "center", marginTop: 14, color: "#e05555" }}>{authErr}</div>}
-        {authOk && <div style={{ fontSize: 12, textAlign: "center", marginTop: 14, color: "#55b870" }}>{authOk}</div>}
-      </div>
-    </div>
-  );
+  sellers.push(seller);
+  saveSellers(sellers);
 
-  return (
-    <div style={S.body}>
-      <style>{`
-        *{box-sizing:border-box;margin:0;padding:0}
-        @keyframes bounce{0%,80%,100%{transform:scale(.7);opacity:.3}40%{transform:scale(1);opacity:1}}
-        @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        textarea::placeholder{color:#252535}
-        .msg-anim{animation:fi .25s ease}
-        .mbai-content p{margin-bottom:9px} .mbai-content p:last-child{margin-bottom:0}
-        .mbai-content strong{color:#fff} .mbai-content ul,.mbai-content ol{padding-left:20px;margin:7px 0}
-        .mbai-content li{margin:4px 0} .mbai-content h1,.mbai-content h2,.mbai-content h3{color:#fff;margin:14px 0 7px;font-size:15px}
-        .mbai-content pre{background:#050508;border:1px solid #1c1c2e;border-radius:8px;padding:16px;margin:10px 0;overflow-x:auto;position:relative}
-        .mbai-content code{font-family:'Courier New',monospace;font-size:13px;color:#7ab8f5}
-        .mbai-content pre code{display:block}
-        .hi-item:hover{background:#10101e!important;border-color:#1c1c2e!important}
-        .nb-btn:hover{border-color:#2a5abf!important;color:#fff!important;background:#10101e!important}
-        .icbtn:hover{background:#141424!important;color:#888!important;border-color:#1c1c2e!important}
-        ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:#1c1c2e;border-radius:3px}
-      `}</style>
+  currentUser = seller;
+  localStorage.setItem('roulotte_user', JSON.stringify(seller));
 
-      {/* SIDEBAR */}
-      <aside style={S.sb}>
-        <div style={S.sbTop}>
-          <div style={S.sbLogo}>CRG</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>CRG IA</div>
-            <div style={{ fontSize: 10, color: "#333", marginTop: 1, letterSpacing: ".5px" }}>INTELLIGENCE ARTIFICIELLE</div>
-          </div>
-        </div>
-        <button className="nb-btn" style={S.nb} onClick={newChat}>
-          <span style={{ fontSize: 17 }}>+</span> Nouvelle conversation
-        </button>
-        <div style={S.hl}>Historique</div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px" }}>
-          {sortedConvs.map(c => (
-            <div key={c.id} className="hi-item" style={S.hi(c.id===cid)} onClick={() => loadConv(c.id)}>
-              <div style={S.hiTxt(c.id===cid)}>💬 {c.title}</div>
-              <button style={S.hd} onClick={e => delConv(c.id, e)}>✕</button>
-            </div>
-          ))}
-        </div>
-        <div style={S.sbFoot}>
-          <div style={S.urow}>
-            <div style={S.uav}>{user?.name[0].toUpperCase()}</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#ccc" }}>{user?.name}</div>
-              <div style={{ fontSize: 11, color: "#333", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 130 }}>{user?.email}</div>
-            </div>
-            <button style={{ marginLeft: "auto", background: "none", border: "none", color: "#282838", cursor: "pointer", fontSize: 15, padding: 4 }} onClick={logout} title="Déconnexion">⎋</button>
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN */}
-      <div style={S.mn}>
-        <div style={S.tbar}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>CRG IA</div>
-          <div style={S.badge}>● En ligne</div>
-          <div style={{ flex: 1 }} />
-        </div>
-
-        <div style={S.msgsArea}>
-          {msgs.length === 0 ? (
-            <div style={S.welcome}>
-              <div style={{ ...S.wlogo, display: "flex" }}>CRG</div>
-              <h2 style={{ fontSize: 26, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Bonjour, comment puis-je vous aider ?</h2>
-              <p style={{ fontSize: 14, color: "#444" }}>Posez n'importe quelle question — code, images, analyses, rédaction...</p>
-            </div>
-          ) : msgs.map((m, i) => {
-            const isU = m.role === "user";
-            return (
-              <div key={i} className="msg-anim" style={S.msg}>
-                {m.img && <div style={{ paddingLeft: 38, marginBottom: 8 }}><img src={m.img} alt="" style={{ maxWidth: 260, maxHeight: 260, borderRadius: 8, border: "1px solid #1c1c2e" }}/></div>}
-                <div style={S.mh}>
-                  <div style={S.mav(isU)}>{isU ? user?.name[0].toUpperCase() : "IA"}</div>
-                  <span style={S.mwho}>{isU ? user?.name : "CRG IA"}</span>
-                  <span style={S.mwhen}>{timeStr}</span>
-                </div>
-                {isU
-                  ? <div style={S.mbUser}>{m.content}</div>
-                  : <div className="mbai-content" style={S.mbAi}><MsgBody content={m.content}/></div>
-                }
-              </div>
-            );
-          })}
-          {busy && (
-            <div style={S.msg}>
-              <div style={S.mh}>
-                <div style={S.mav(false)}>IA</div>
-                <span style={S.mwho}>CRG IA</span>
-              </div>
-              <div style={{ paddingLeft: 38 }}>
-                <span style={{...S.dot1}}/>
-                <span style={{...S.dot1, animationDelay:".2s"}}/>
-                <span style={{...S.dot1, animationDelay:".4s"}}/>
-              </div>
-            </div>
-          )}
-          <div ref={msgsEnd}/>
-        </div>
-
-        <div style={S.iz}>
-          <div style={S.ibox(false)}>
-            {pendingImg && (
-              <div style={{ padding: "10px 16px 0", display: "flex" }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <img src={pendingImg.url} alt="" style={{ width: 58, height: 58, objectFit: "cover", borderRadius: 6, border: "1px solid #1c1c2e" }}/>
-                  <button onClick={() => setPendingImg(null)} style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "#e05555", border: "none", color: "#fff", fontSize: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                </div>
-              </div>
-            )}
-            <div style={S.irow}>
-              <textarea
-                style={S.ta}
-                placeholder="Posez votre question à CRG IA..."
-                value={input}
-                rows={1}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKey}
-              />
-              <button className="icbtn" style={S.icobtn} onClick={() => fileRef.current.click()} title="Joindre une image">🖼</button>
-              <button style={S.sendbtn(busy || (!input.trim() && !pendingImg))} onClick={send} disabled={busy || (!input.trim() && !pendingImg)}>➤</button>
-            </div>
-          </div>
-          <div style={S.hint}>CRG IA peut faire des erreurs — vérifiez les informations importantes.</div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImg}/>
-        </div>
-      </div>
-    </div>
-  );
+  closeModal('registerModal');
+  updateHeaderForUser();
+  updateStats();
+  showToast('Compte créé avec succès ! Bienvenue ' + prenom + ' 🎉', true);
 }
+
+function loginSeller() {
+  const tel = document.getElementById('login-tel').value.trim();
+  const pass = document.getElementById('login-pass').value;
+
+  const sellers = getSellers();
+  const seller = sellers.find(s => s.tel === tel && s.pass === pass);
+
+  if (!seller) return showToast('Téléphone ou mot de passe incorrect', false);
+
+  currentUser = seller;
+  localStorage.setItem('roulotte_user', JSON.stringify(seller));
+
+  closeModal('loginModal');
+  updateHeaderForUser();
+  showToast('Bienvenue ' + seller.prenom + ' ! 👋', true);
+  filterArticles();
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('roulotte_user');
+  closeModal('accountModal');
+  updateHeaderForUser();
+  filterArticles();
+  showToast('Déconnecté avec succès', true);
+}
+
+function updateHeaderForUser() {
+  const btnLogin = document.getElementById('btnLogin');
+  const btnBecomeSeller = document.getElementById('btnBecomeSeller');
+  const btnAddArticle = document.getElementById('btnAddArticle');
+  const btnAccount = document.getElementById('btnAccount');
+
+  if (currentUser) {
+    btnLogin.style.display = 'none';
+    btnBecomeSeller.style.display = 'none';
+    btnAddArticle.classList.add('visible');
+    btnAccount.classList.add('visible');
+    document.getElementById('accountName').textContent = currentUser.prenom;
+  } else {
+    btnLogin.style.display = '';
+    btnBecomeSeller.style.display = '';
+    btnAddArticle.classList.remove('visible');
+    btnAccount.classList.remove('visible');
+  }
+}
+
+// ════════════════════════════════════════════
+// GESTION PHOTOS
+// ════════════════════════════════════════════
+let currentPhotos = []; // tableau de base64
+
+function handlePhotosUpload(event) {
+  const files = Array.from(event.target.files);
+  const remaining = 4 - currentPhotos.length;
+  if (remaining <= 0) return showToast('Maximum 4 photos atteint', false);
+
+  const toAdd = files.slice(0, remaining);
+
+  toAdd.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Compresser l'image avant stockage
+      compressImage(e.target.result, 800, 0.75, (compressed) => {
+        currentPhotos.push(compressed);
+        renderPhotosPreview();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Reset input pour permettre re-upload même fichier
+  event.target.value = '';
+
+  if (files.length > remaining) {
+    showToast(`Seules ${remaining} photo(s) ajoutée(s) — maximum 4`, false);
+  }
+}
+
+function compressImage(dataUrl, maxWidth, quality, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    let w = img.width, h = img.height;
+    if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+function renderPhotosPreview() {
+  const preview = document.getElementById('photosPreview');
+  preview.innerHTML = '';
+  currentPhotos.forEach((src, idx) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.innerHTML = `
+      <img src="${src}" alt="Photo ${idx+1}">
+      ${idx === 0 ? '<div class="photo-main-badge">PRINCIPALE</div>' : ''}
+      <button class="photo-thumb-remove" onclick="removePhoto(${idx})" title="Supprimer">✕</button>
+    `;
+    preview.appendChild(thumb);
+  });
+
+  // Afficher ou cacher la zone d'upload selon le nombre de photos
+  const zone = document.querySelector('.upload-zone');
+  if (currentPhotos.length >= 4) {
+    zone.style.opacity = '0.4';
+    zone.style.pointerEvents = 'none';
+  } else {
+    zone.style.opacity = '1';
+    zone.style.pointerEvents = '';
+  }
+}
+
+function removePhoto(idx) {
+  currentPhotos.splice(idx, 1);
+  renderPhotosPreview();
+}
+
+// ════════════════════════════════════════════
+// ARTICLES
+// ════════════════════════════════════════════
+function saveArticle() {
+  if (!currentUser) return showToast('Connectez-vous pour publier une annonce', false);
+
+  const titre = document.getElementById('art-titre').value.trim();
+  const cat = document.getElementById('art-categorie').value;
+  const prix = parseFloat(document.getElementById('art-prix').value);
+  const desc = document.getElementById('art-desc').value.trim();
+  const lieu = document.getElementById('art-lieu').value.trim();
+  const emoji = document.getElementById('art-emoji').value.trim() || '📦';
+  const nego = document.getElementById('art-nego').checked;
+  const urgent = document.getElementById('art-urgent').checked;
+  const editId = document.getElementById('article-edit-id').value;
+
+  if (!titre || !cat || !prix || !desc) return showToast('Remplissez tous les champs obligatoires', false);
+
+  const articles = getArticles();
+
+  if (editId) {
+    const idx = articles.findIndex(a => a.id === editId);
+    if (idx !== -1) {
+      articles[idx] = { ...articles[idx], titre, cat, prix, desc, lieu, emoji, nego, urgent, photos: [...currentPhotos] };
+      saveArticles(articles);
+      showToast('Annonce modifiée avec succès ✅', true);
+    }
+  } else {
+    const article = {
+      id: 'a_' + Date.now(),
+      titre, cat, emoji, prix, nego, urgent, desc, lieu,
+      photos: [...currentPhotos],
+      sellerId: currentUser.id,
+      sellerPrenom: currentUser.prenom,
+      sellerNom: currentUser.nom,
+      sellerTel: currentUser.tel,
+      sellerRegion: currentUser.region,
+      date: Date.now(),
+    };
+    articles.unshift(article);
+    saveArticles(articles);
+    showToast('Annonce publiée avec succès ! 🎉', true);
+  }
+
+  currentPhotos = [];
+  closeModal('articleModal');
+  filterArticles();
+  updateStats();
+}
+
+function editArticle(id) {
+  const articles = getArticles();
+  const art = articles.find(a => a.id === id);
+  if (!art) return;
+
+  document.getElementById('articleModalTitle').innerHTML = 'MODIFIER <span>L\'ANNONCE</span>';
+  document.getElementById('article-edit-id').value = id;
+  document.getElementById('art-titre').value = art.titre;
+  document.getElementById('art-categorie').value = art.cat;
+  document.getElementById('art-prix').value = art.prix;
+  document.getElementById('art-desc').value = art.desc;
+  document.getElementById('art-lieu').value = art.lieu || '';
+  document.getElementById('art-emoji').value = art.emoji || '';
+  document.getElementById('art-nego').checked = art.nego;
+  document.getElementById('art-urgent').checked = art.urgent;
+
+  // Charger les photos existantes
+  currentPhotos = art.photos ? [...art.photos] : [];
+  renderPhotosPreview();
+
+  closeModal('accountModal');
+  openModal('articleModal');
+}
+
+function askDeleteArticle(id) {
+  pendingDeleteId = id;
+  openModal('deleteModal');
+}
+
+function confirmDelete() {
+  if (!pendingDeleteId) return;
+  let articles = getArticles();
+  articles = articles.filter(a => a.id !== pendingDeleteId);
+  saveArticles(articles);
+  pendingDeleteId = null;
+  closeModal('deleteModal');
+  closeModal('accountModal');
+  filterArticles();
+  updateStats();
+  showToast('Annonce supprimée', true);
+}
+
+function contactSeller(id) {
+  const articles = getArticles();
+  const art = articles.find(a => a.id === id);
+  if (!art) return;
+
+  const initials = (art.sellerPrenom[0] + art.sellerNom[0]).toUpperCase();
+
+  document.getElementById('contactSellerInfo').innerHTML = `
+    <div class="contact-seller-avatar">${initials}</div>
+    <div>
+      <div style="font-weight:700;">${art.sellerPrenom} ${art.sellerNom}</div>
+      <div style="font-size:0.78rem;color:var(--muted);">📍 ${art.sellerRegion || art.lieu || 'France'}</div>
+    </div>
+  `;
+
+  document.getElementById('contactPhone').textContent = art.sellerTel;
+  openModal('contactModal');
+}
+
+function openAccountMenu() {
+  if (!currentUser) return openModal('loginModal');
+
+  const articles = getArticles();
+  const myArticles = articles.filter(a => a.sellerId === currentUser.id);
+
+  const initials = (currentUser.prenom[0] + currentUser.nom[0]).toUpperCase();
+
+  document.getElementById('accountInfo').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:1rem;">
+      <div class="contact-seller-avatar" style="width:48px;height:48px;font-size:1.1rem;">${initials}</div>
+      <div>
+        <div style="font-weight:700;font-size:1.05rem;">${currentUser.prenom} ${currentUser.nom}</div>
+        <div style="font-size:0.78rem;color:var(--muted);">📞 ${currentUser.tel}</div>
+        <div style="font-size:0.78rem;color:var(--muted);">📍 ${currentUser.region}</div>
+      </div>
+    </div>
+  `;
+
+  const list = document.getElementById('myArticlesList');
+  if (myArticles.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:1rem;">Vous n'avez pas encore d'annonce.</div>`;
+  } else {
+    list.innerHTML = myArticles.map(a => `
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;">
+          <span style="font-size:1.8rem;">${a.emoji}</span>
+          <div>
+            <div style="font-weight:600;font-size:0.9rem;">${a.titre}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--accent);">${a.prix.toLocaleString()} €</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="edit-btn" onclick="editArticle('${a.id}')">✏️ Modifier</button>
+          <button class="delete-btn" onclick="closeModal('accountModal');askDeleteArticle('${a.id}')">🗑️ Supprimer</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  openModal('accountModal');
+}
+
+// ════════════════════════════════════════════
+// CATEGORIES
+// ════════════════════════════════════════════
+function renderCategories() {
+  const articles = getArticles();
+  const grid = document.getElementById('categoriesGrid');
+  grid.innerHTML = '';
+
+  CATEGORIES.forEach(cat => {
+    const count = cat.id === 'tout'
+      ? articles.length
+      : articles.filter(a => a.cat === cat.id).length;
+
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (cat.id === selectedCategory ? ' active' : '');
+    btn.onclick = () => selectCategory(cat.id);
+    btn.innerHTML = `<span class="cat-icon">${cat.icon}</span>${cat.label}<span class="cat-count">${count} annonce${count > 1 ? 's' : ''}</span>`;
+    grid.appendChild(btn);
+  });
+}
+
+function selectCategory(id) {
+  selectedCategory = id;
+  renderCategories();
+
+  const cat = CATEGORIES.find(c => c.id === id);
+  const banner = document.getElementById('activeCatBanner');
+
+  if (id !== 'tout') {
+    banner.classList.add('visible');
+    document.getElementById('activeCatIcon').textContent = cat.icon;
+    document.getElementById('activeCatName').textContent = cat.label;
+    document.getElementById('activeCatDesc').textContent = cat.desc;
+  } else {
+    banner.classList.remove('visible');
+  }
+
+  filterArticles();
+  document.getElementById('annonces').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearCategory() { selectCategory('tout'); }
+
+// ════════════════════════════════════════════
+// FILTRES & RENDU
+// ════════════════════════════════════════════
+function filterArticles() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let articles = getArticles();
+
+  // Filtre catégorie
+  if (selectedCategory !== 'tout') {
+    articles = articles.filter(a => a.cat === selectedCategory);
+  }
+
+  // Filtre recherche
+  if (search) {
+    articles = articles.filter(a =>
+      a.titre.toLowerCase().includes(search) ||
+      a.desc.toLowerCase().includes(search) ||
+      (a.lieu && a.lieu.toLowerCase().includes(search)) ||
+      (a.sellerPrenom && a.sellerPrenom.toLowerCase().includes(search))
+    );
+  }
+
+  // Tri
+  if (sort === 'price-asc') articles.sort((a,b) => a.prix - b.prix);
+  if (sort === 'price-desc') articles.sort((a,b) => b.prix - a.prix);
+  if (sort === 'name-asc') articles.sort((a,b) => a.titre.localeCompare(b.titre));
+  if (sort === 'default') articles.sort((a,b) => b.date - a.date);
+
+  renderArticles(articles);
+  document.querySelector('#resultsCount span').textContent = articles.length;
+  renderCategories();
+}
+
+function renderArticles(list) {
+  const grid = document.getElementById('productsGrid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+
+  if (list.length === 0) {
+    empty.classList.add('visible');
+    grid.appendChild(empty);
+    return;
+  }
+
+  empty.classList.remove('visible');
+
+  list.forEach((art, i) => {
+    const isOwner = currentUser && currentUser.id === art.sellerId;
+    const initials = (art.sellerPrenom[0] + art.sellerNom[0]).toUpperCase();
+    const cat = CATEGORIES.find(c => c.id === art.cat) || {};
+    const photos = art.photos && art.photos.length > 0 ? art.photos : null;
+
+    let badge = '';
+    if (art.urgent) badge = `<div class="product-badge badge-urgent">URGENT</div>`;
+    else if (art.nego) badge = `<div class="product-badge badge-nego">NÉGOCIABLE</div>`;
+    else if (Date.now() - art.date < 86400000 * 3) badge = `<div class="product-badge badge-new">NOUVEAU</div>`;
+
+    // Construire la galerie
+    let galleryHTML = '';
+    if (photos) {
+      const slides = photos.map(src =>
+        `<img class="card-gallery-slide" src="${src}" alt="${art.titre}" loading="lazy">`
+      ).join('');
+      const dots = photos.length > 1
+        ? `<div class="card-gallery-dots">${photos.map((_,di) => `<div class="card-gallery-dot${di===0?' active':''}"></div>`).join('')}</div>`
+        : '';
+      const navBtns = photos.length > 1
+        ? `<button class="card-gallery-prev" onclick="slideCard(this,-1)">‹</button><button class="card-gallery-next" onclick="slideCard(this,1)">›</button>`
+        : '';
+      const countBadge = photos.length > 1
+        ? `<div class="photos-count-badge">📷 ${photos.length}</div>`
+        : '';
+      galleryHTML = `
+        <div class="card-gallery">
+          ${badge}
+          <div class="card-gallery-slides" data-current="0" data-total="${photos.length}">${slides}</div>
+          ${navBtns}
+          ${dots}
+          ${countBadge}
+          <div class="card-gallery-overlay">
+            <button class="quick-btn" onclick="contactSeller('${art.id}')">📞 CONTACTER</button>
+          </div>
+        </div>`;
+    } else {
+      galleryHTML = `
+        <div class="card-gallery">
+          ${badge}
+          <div class="card-gallery-slides" data-current="0" data-total="1">
+            <div class="card-gallery-emoji">${art.emoji || '📦'}</div>
+          </div>
+          <div class="card-gallery-overlay">
+            <button class="quick-btn" onclick="contactSeller('${art.id}')">📞 CONTACTER</button>
+          </div>
+        </div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.style.animationDelay = `${i * 0.05}s`;
+
+    card.innerHTML = `
+      ${galleryHTML}
+      <div class="product-info">
+        <div class="product-cat">${cat.icon || ''} ${cat.label || art.cat}</div>
+        <div class="product-name">${art.titre}</div>
+        <div class="product-desc">${art.desc.length > 90 ? art.desc.slice(0,90)+'...' : art.desc}</div>
+        <div class="product-seller">
+          <div class="seller-avatar">${initials}</div>
+          <div>
+            <div class="seller-name">${art.sellerPrenom} ${art.sellerNom}</div>
+            <div class="seller-region">${art.lieu || art.sellerRegion || 'France'}</div>
+          </div>
+        </div>
+        <div class="product-footer">
+          <div>
+            <span class="product-price">${art.prix.toLocaleString()} €</span>
+            ${art.nego ? '<span class="price-nego">NÉGO</span>' : ''}
+          </div>
+          <button class="contact-btn" onclick="contactSeller('${art.id}')">📞 Contacter</button>
+        </div>
+        ${isOwner ? `
+        <div class="owner-actions">
+          <button class="edit-btn" onclick="editArticle('${art.id}')">✏️ Modifier</button>
+          <button class="delete-btn" onclick="askDeleteArticle('${art.id}')">🗑️ Supprimer</button>
+        </div>` : ''}
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+// Navigation slider sur les cartes
+function slideCard(btn, dir) {
+  btn.stopPropagation && btn.stopPropagation();
+  const gallery = btn.closest('.card-gallery');
+  const slides = gallery.querySelector('.card-gallery-slides');
+  const dots = gallery.querySelectorAll('.card-gallery-dot');
+  let current = parseInt(slides.dataset.current) || 0;
+  const total = parseInt(slides.dataset.total) || 1;
+
+  current = (current + dir + total) % total;
+  slides.dataset.current = current;
+  slides.style.transform = `translateX(-${current * 100}%)`;
+
+  dots.forEach((d, i) => d.classList.toggle('active', i === current));
+}
+
+// ════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════
+function openModal(id) {
+  // Réinitialiser le form article si c'est une nouvelle annonce
+  if (id === 'articleModal') {
+    const editId = document.getElementById('article-edit-id').value;
+    if (!editId) {
+      document.getElementById('articleModalTitle').innerHTML = 'DÉPOSER UNE <span>ANNONCE</span>';
+      document.getElementById('art-titre').value = '';
+      document.getElementById('art-categorie').value = '';
+      document.getElementById('art-prix').value = '';
+      document.getElementById('art-desc').value = '';
+      document.getElementById('art-lieu').value = '';
+      document.getElementById('art-emoji').value = '';
+      document.getElementById('art-nego').checked = false;
+      document.getElementById('art-urgent').checked = false;
+      currentPhotos = [];
+      renderPhotosPreview();
+    }
+  }
+
+  if (id === 'articleModal' && !currentUser) {
+    showToast('Connectez-vous pour déposer une annonce', false);
+    openModal('loginModal');
+    return;
+  }
+
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+  if (id === 'articleModal') {
+    document.getElementById('article-edit-id').value = '';
+  }
+}
+
+// Fermer modal en cliquant overlay
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) {
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  });
+});
+
+// ════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════
+function showToast(msg, success = true) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = success ? '✅' : '❌';
+  document.getElementById('toastMsg').textContent = msg;
+  toast.className = 'toast ' + (success ? 'success' : '') + ' show';
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
